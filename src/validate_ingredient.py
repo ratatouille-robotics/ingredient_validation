@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 import rospkg
 import cv2
@@ -21,8 +21,8 @@ class IngredientValidation:
         self.loop_rate = rospy.Rate(1)
 
         # Publishers
-        self.pub = rospy.Publisher('ingredient', String, queue_size=10)
-        self.pub_img = rospy.Publisher('ingredient_img', Image, queue_size=10)
+        self.pub = rospy.Publisher('ingredient', String, queue_size=1)
+        self.pub_img = rospy.Publisher('ingredient_img', Image, queue_size=1)
 
         # Subscribers
         rospy.Subscriber("/camera/color/image_raw",Image,self.callback,queue_size=1,buff_size=2**24)
