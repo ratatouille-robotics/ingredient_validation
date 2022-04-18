@@ -25,7 +25,7 @@ class IngredientValidation:
         self.pub_img = rospy.Publisher('ingredient_img', Image, queue_size=10)
 
         # Subscribers
-        rospy.Subscriber("/camera/color/image_raw",Image,self.callback)
+        rospy.Subscriber("/camera/color/image_raw",Image,self.callback,queue_size=1,buff_size=2**24)
 
         # Class names
         self.class_names = ["bellpepper","blackolives","blackpepper","cabbage","carrot",
@@ -39,7 +39,7 @@ class IngredientValidation:
         # Model
         self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0',verbose=False)
         self.model.classifier.fc = nn.Linear(in_features=1280, out_features=len(self.class_names), bias=True)
-        weights= torch.load(weights_path + "/model/efficientNet-b0-svd-epoch6.pth")
+        weights= torch.load(weights_path + "/model/efficientNet-b0-svd-strong-epoch5.pth")
         self.model.load_state_dict(weights)
         self.model.eval()
 
@@ -63,8 +63,10 @@ class IngredientValidation:
         preds = torch.argmax(outputs, 1)
         if score[0].item() > 0.3:
             prediction = self.class_names[preds]
+            pred_string = prediction + " " + str(round(score[0].item(), 2))
         else:
             prediction = "No ingredient found"
+            pred_string = prediction
         self.pub.publish(prediction)
         print("Predicted ingredient: ", prediction)
         print("Confidence score: ", score[0].item())
@@ -75,8 +77,8 @@ class IngredientValidation:
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,500)
         fontScale              = 1
-        fontColor              = (255,255,255)
-        thickness              = 1
+        fontColor              = (255,0,0)
+        thickness              = 2
         lineType               = 2
 
         height, width, _ = image_anno.shape
@@ -84,7 +86,7 @@ class IngredientValidation:
         upper_left = ((width // 2) - 200, (height // 2) + 200)
         bottom_right = ((width // 2) + 200, (height // 2) - 200)
         cv2.rectangle(image_anno, upper_left, bottom_right, (255, 255, 255), 2)
-        cv2.putText(image_anno, prediction, upper_left, font, fontScale, fontColor, thickness, lineType)
+        cv2.putText(image_anno, pred_string, upper_left, font, fontScale, fontColor, thickness, lineType)
         image_anno = cv2.cvtColor(image_anno, cv2.COLOR_BGR2RGB)
         self.pub_img.publish(self.br.cv2_to_imgmsg(image_anno))
 
