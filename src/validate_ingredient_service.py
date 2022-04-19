@@ -22,10 +22,15 @@ def handle_ingredient_validation(_ : ValidateIngredientRequest):
         loop_rate = rospy.Rate(1)
 
         # Class names
-        class_names = ["bellpepper","blackolives","blackpepper","cabbage","carrot",
-                        "cherrytomatoes","chilliflakes","corn","cucumbers","greenbeans",
-                        "greenolives","habaneropepper","mushroom","oregano","peanuts",
-                        "redonion","salt","sugar","vinegar","water","whiteonion","zucchini"]
+        # class_names = ["bellpepper","blackolives","blackpepper","cabbage","carrot",
+        #                 "cherrytomatoes","chilliflakes","corn","cucumbers","greenbeans",
+        #                 "greenolives","habaneropepper","mushroom","oregano","peanuts",
+        #                 "redonion","salt","sugar","vinegar","water","whiteonion","zucchini"]
+
+        class_names = ["blackolives","blackpepper","cabbage","carrot",
+                    "cherrytomatoes","chilliflakes","corn","cucumbers",
+                    "greenolives","habaneropepper","mushroom","oregano","peanuts",
+                    "redonion","salt","sugar","vinegar","water","whiteonion"]
 
         rospack = rospkg.RosPack()
         weights_path = rospack.get_path('ingredient_validation')
@@ -33,7 +38,9 @@ def handle_ingredient_validation(_ : ValidateIngredientRequest):
         # Load model & weights
         model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0',verbose=False)
         model.classifier.fc = nn.Linear(in_features=1280, out_features=len(class_names), bias=True)
-        weights= torch.load(weights_path + "/model/efficientNet-b0-svd-strong-epoch5.pth")
+        # weights= torch.load(weights_path + "/model/efficientNet-b0-svd-strong-epoch5.pth")
+        # weights= torch.load(weights_path + "/model/efficientNet-b0-svd-improved-epoch20.pth")
+        weights= torch.load(weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth")
         model.load_state_dict(weights)
         model.eval()
 
@@ -46,7 +53,7 @@ def handle_ingredient_validation(_ : ValidateIngredientRequest):
         image = np.asarray(image)
         image = PILImage.fromarray(image)
         torch_transform = T.Compose([
-                T.CenterCrop((720,720)),
+                T.CenterCrop((512,512)),
                 T.Resize((512,512)),
                 T.ToTensor(),
                 T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
