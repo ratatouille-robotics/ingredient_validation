@@ -28,9 +28,9 @@ def handle_ingredient_validation(_ : ValidateIngredientRequest):
         #                 "redonion","salt","sugar","vinegar","water","whiteonion","zucchini"]
 
         class_names = ["blackolives","blackpepper","cabbage","carrot",
-                    "cherrytomatoes","chilliflakes","corn","cucumbers",
+                    "cherrytomatoes","chilliflakes","corn","cucumber",
                     "greenolives","habaneropepper","mushroom","oregano","peanuts",
-                    "redonion","salt","sugar","vinegar","water","whiteonion"]
+                    "redonion","salt","sugar","vinegar","vinegar","whiteonion"]
 
         rospack = rospkg.RosPack()
         weights_path = rospack.get_path('ingredient_validation')
