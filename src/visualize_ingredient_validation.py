@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
+
+"""
+Author: Sai Shruthi Balaji
+
+This is a simple test script that constantly runs, reads the current image, performs ingredient validation
+and publishes an image with a bounding box and text indicating the identified ingredient.
+
+Note: It is for visualization purposes only and not for use by the state machine.
+"""
+
 import rospy
 import rospkg
 import cv2
+import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as T
 from PIL import Image as PILImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
-import os
-import numpy as np
-import torch
-import torchvision.transforms as T
 
 class IngredientValidation:
+    """
+    This class ties together the methods needed for Ingredient Validation.
+    """
     def __init__(self):
         # Params
         self.br = CvBridge()
@@ -28,11 +40,6 @@ class IngredientValidation:
         rospy.Subscriber("/camera/color/image_raw",Image,self.callback,queue_size=1,buff_size=2**24)
 
         # Class names
-        # self.class_names = ["bellpepper","blackolives","blackpepper","cabbage","carrot",
-        #                     "cherrytomatoes","chilliflakes","corn","cucumbers","greenbeans",
-        #                     "greenolives","habaneropepper","mushroom","oregano","peanuts",
-        #                     "redonion","salt","sugar","vinegar","water","whiteonion","zucchini"]
-
         self.class_names = ["blackolives","blackpepper","cabbage","carrot",
                     "cherrytomatoes","chilliflakes","corn","cucumbers",
                     "greenolives","habaneropepper","mushroom","oregano","peanuts",
@@ -44,12 +51,15 @@ class IngredientValidation:
         # Model
         self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0',verbose=False)
         self.model.classifier.fc = nn.Linear(in_features=1280, out_features=len(self.class_names), bias=True)
-        # weights= torch.load(weights_path + "/model/efficientNet-b0-svd-improved-epoch20.pth")
         weights= torch.load(weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth")
         self.model.load_state_dict(weights)
         self.model.eval()
 
     def callback(self, msg):
+        """
+        This callback is invoked whenever an image is obtained from the RGB Image subscriber
+        """
+        # Image preprocessing
         image = self.br.imgmsg_to_cv2(msg)
         image_anno = image
         image = np.asarray(image)
@@ -63,6 +73,7 @@ class IngredientValidation:
         image = torch_transform(image)
         image = torch.unsqueeze(image, dim=0)
 
+        # Obtaining model prediction
         outputs = self.model(image)
         outputs = F.softmax(outputs, dim=1)
         score = torch.max(outputs, 1)
@@ -78,8 +89,6 @@ class IngredientValidation:
         print("Confidence score: ", score[0].item())
 
         # Make annotated image
-
-        # Write some Text
         font                   = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (10,500)
         fontScale              = 1
@@ -87,6 +96,7 @@ class IngredientValidation:
         thickness              = 2
         lineType               = 2
 
+        # Adding rectangle and text
         height, width, _ = image_anno.shape
         print(width, height)
         upper_left = ((width // 2) - 200, (height // 2) + 200)
@@ -94,14 +104,16 @@ class IngredientValidation:
         cv2.rectangle(image_anno, upper_left, bottom_right, (255, 255, 255), 2)
         cv2.putText(image_anno, pred_string, upper_left, font, fontScale, fontColor, thickness, lineType)
         image_anno = cv2.cvtColor(image_anno, cv2.COLOR_BGR2RGB)
+        
+        # Publish image
         self.pub_img.publish(self.br.cv2_to_imgmsg(image_anno))
 
     def start(self):
         while not rospy.is_shutdown():
-            # rospy.loginfo('Validating ingredient...')
             self.loop_rate.sleep()
 
 if __name__ == '__main__':
+    # Start the node
     rospy.init_node('ingredient_validation_node', anonymous=True)
     node = IngredientValidation()
     node.start()
