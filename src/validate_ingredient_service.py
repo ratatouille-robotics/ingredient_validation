@@ -38,8 +38,8 @@ class IngredientValidationService:
 
     def __init__(self):
         # Initialize needed items
-        br = CvBridge()
-        loop_rate = rospy.Rate(1)
+        self.br = CvBridge()
+        self.loop_rate = rospy.Rate(1)
         self.unsure = False
 
         self.class_names = [
@@ -73,23 +73,23 @@ class IngredientValidationService:
             "sugar",
         ]
 
-        rospack = rospkg.RosPack()
-        weights_path = rospack.get_path("ingredient_validation")
-        camera_rgb_topic = "/camera/color/image_raw"
+        self.camera_rgb_topic = "/camera/color/image_raw"
 
         # Load model & weights
-        model = torch.hub.load(
+        rospack = rospkg.RosPack()
+        weights_path = rospack.get_path("ingredient_validation")
+        self.model = torch.hub.load(
             "NVIDIA/DeepLearningExamples:torchhub",
             "nvidia_efficientnet_b0",
             verbose=False,
         )
-        model.classifier.fc = nn.Linear(
+        self.model.classifier.fc = nn.Linear(
             in_features=1280, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
             weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth"
         )
-        model.load_state_dict(weights)
+        self.model.load_state_dict(weights)
 
     def rgb_validation(self) -> str:
         """
