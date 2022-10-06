@@ -7,18 +7,20 @@ This service, when called, reads the current snapshot of image from the camera,
 passes it through the ingredient validation model and sends the response.
 
 Note: It is currently used by the state machine.
+Assumption: Fill level of container is high enough such that it is in the FOV of spectral camera
 """
 import cv2
-import torch
+import numpy as np
+import pandas as pd
+import pickle
 import rospy
 import rospkg
 import socket
-import pickle
-import numpy as np
-import pandas as pd
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
+
 from PIL import Image as PILImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
@@ -29,18 +31,18 @@ from ingredient_validation.srv import (
     ValidateIngredientResponse,
 )
 
-
 class IngredientValidationService:
     """
     This class binds all the methods needed for the ingredient validation service
     """
 
-    def __init__():
+    def __init__(self):
         # Initialize needed items
         br = CvBridge()
         loop_rate = rospy.Rate(1)
+        self.unsure = False
 
-        class_names = [
+        self.class_names = [
             "blackolives",
             "blackpepper",
             "cabbage",
@@ -58,10 +60,11 @@ class IngredientValidationService:
             "salt",
             "sugar",
             "vinegar",
+            "water",
             "whiteonion",
         ]  # also "no_ingredient" class added manually
 
-        visually_similar_classes = [
+        self.visually_similar_classes = [
             "bellpepper",
             "blackpepper",
             "cucumber",
@@ -81,20 +84,19 @@ class IngredientValidationService:
             verbose=False,
         )
         model.classifier.fc = nn.Linear(
-            in_features=1280, out_features=len(class_names), bias=True
+            in_features=1280, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
             weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth"
         )
         model.load_state_dict(weights)
 
-    def handle_ingredient_validation(
-        self, _: ValidateIngredientRequest
-    ) -> ValidateIngredientResponse:
+    def rgb_validation(self) -> str:
         """
-        Handler for the service
+        Validate ingredient from RGB image
 
-        :return: A ValidateIngredientResponse Msg that contains a string indicating the detected ingredient.
+        Returns:
+            string: The ingredient present in the image
         """
         try:
             # Get current image
@@ -122,36 +124,27 @@ class IngredientValidationService:
             preds = torch.argmax(outputs, 1)
 
             # If score < 0.3, then say "No ingredient found"
-            unsure = False
             prediction = ""
             if score[0].item() > 0.3:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
-                unsure = True
-
-            # Invoke spectral validation if we have identified one of the visually similar ingredients,
-            # or if confidence threshold is low
-            if prediction in self.visually_similar_classes or prediction is unsure:
-                prediction = self.spectral_validation()
-
-            if prediction:
-                response = ValidateIngredientResponse()
-                response.found_ingredient = prediction
-                return response
+                self.unsure = True
+            return prediction
 
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
-    def spectral_validation(self):
+    def spectral_validation(self) -> str:
         """
         This method invokes a spectral scan, identifies the ingredient and returns the corresponding class name.
 
-        :return: str -> Ingredient class name
+        Returns:
+            string: Ingredient class name
         """
         # We need a TCP connection with the windows server to which spectral camera is connected
-        # tcp_socket = socket.create_connection(('10.1.1.2', 65000))
-        tcp_socket = socket.create_connection(("127.0.0.1", 65000))
+        tcp_socket = socket.create_connection(('10.1.1.2', 65000))
+        # tcp_socket = socket.create_connection(("127.0.0.1", 65000))
         print("Connection established")
 
         try:
@@ -170,6 +163,11 @@ class IngredientValidationService:
             # Store data in pandas df
             self.spectra_df = pd.DataFrame(spectra[1:], columns=spectra[0])
 
+            # Get the prediction and return
+            prediction = self.spectral_sort(self.spectra_df)
+
+            return prediction
+
         except:
             print("Connection with windows machine failed!")
 
@@ -177,16 +175,39 @@ class IngredientValidationService:
             print("Closing socket")
             tcp_socket.close()
 
-        # Get the prediction and return
-        prediction = self.spectral_sort()
-
-        return prediction
-
-    def spectral_sort(self):
+    def spectral_sort(self, spectra_df: pd.DataFrame) -> str:
         """
         This method takes the spectral reading and classifies the ingredient.
+
+        Returns:
+        string: Name of identified ingredient
         """
-        pass
+        return "<spectrally_identified_ingredient>"
+
+    def handle_ingredient_validation(
+        self,
+        req: ValidateIngredientRequest
+    ) -> ValidateIngredientResponse:
+        """
+        Handler for the service
+
+        :return: A ValidateIngredientResponse Msg that contains a string indicating the detected ingredient.
+        """
+        if req.mode == 'rgb':
+            prediction = self.rgb_validation()
+
+        elif req.mode == 'spectral':
+            # Invoke spectral validation only if we have identified one of the visually similar ingredients,
+            # or if confidence threshold is low
+            if req.ingredient_name in self.visually_similar_classes or req.ingredient_name == "no_ingredient":
+                prediction = self.spectral_validation()
+            else:
+                prediction = req.ingredient_name
+
+        if prediction:
+            response = ValidateIngredientResponse()
+            response.found_ingredient = prediction
+            return response
 
 
 def IngredientValidationServer():

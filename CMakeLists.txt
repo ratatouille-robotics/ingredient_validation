@@ -159,7 +159,12 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS src/validate_ingredient_service.py src/validate_ingredient_client.py
+catkin_install_python(
+  PROGRAMS
+  src/validate_ingredient_service.py
+  src/validate_ingredient_test_client.py
+  src/visualize_ingredient_validation.py
+  src/data_collection.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
