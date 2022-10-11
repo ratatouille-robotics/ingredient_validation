@@ -30,6 +30,7 @@ from ingredient_validation.srv import (
     ValidateIngredientRequest,
     ValidateIngredientResponse,
 )
+from spectral_classification import classify_spectra
 
 class IngredientValidationService:
     """
@@ -164,7 +165,7 @@ class IngredientValidationService:
             self.spectra_df = pd.DataFrame(spectra[1:], columns=spectra[0])
 
             # Get the prediction and return
-            prediction = self.spectral_sort(self.spectra_df)
+            prediction = classify_spectra(self.spectra_df)
 
             return prediction
 
@@ -174,15 +175,6 @@ class IngredientValidationService:
         finally:
             print("Closing socket")
             tcp_socket.close()
-
-    def spectral_sort(self, spectra_df: pd.DataFrame) -> str:
-        """
-        This method takes the spectral reading and classifies the ingredient.
-
-        Returns:
-        string: Name of identified ingredient
-        """
-        return "<spectrally_identified_ingredient>"
 
     def handle_ingredient_validation(
         self,

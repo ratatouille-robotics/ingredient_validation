@@ -164,6 +164,7 @@ catkin_install_python(
   src/validate_ingredient_service.py
   src/validate_ingredient_test_client.py
   src/visualize_ingredient_validation.py
+  src/spectral_classification.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
