@@ -10,6 +10,7 @@ Note: It is currently used by the state machine.
 Assumption: Fill level of container is high enough such that it is in the FOV of spectral camera
 """
 import cv2
+import os
 import numpy as np
 import pandas as pd
 import pickle
@@ -20,6 +21,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
+import similaritymeasures
+import matplotlib.pyplot as plt
+from turtle import color
 
 from PIL import Image as PILImage
 from sensor_msgs.msg import Image
@@ -30,8 +34,6 @@ from ingredient_validation.srv import (
     ValidateIngredientRequest,
     ValidateIngredientResponse,
 )
-from spectral_classification import classify_spectra
-
 class IngredientValidationService:
     """
     This class binds all the methods needed for the ingredient validation service
@@ -128,6 +130,65 @@ class IngredientValidationService:
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
+    def classify_spectra(self, test_sample: pd.DataFrame = None) -> str:
+        """
+        Method to perform classification by comparing Fretchet distance with existing dataset
+        """
+        # Load existing data
+        rospack = rospkg.RosPack()
+        package_path = rospack.get_path("ingredient_validation")
+        data_path = os.path.join(package_path, 'data/spectral_absorbance')
+        data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
+
+        # List of ingredients
+        # ingredient_names = ['salt','sugar','blackpepper', 'oregano', 'bellpepper', 'cucumber']
+        ingredient_names = ['blackpepper', 'oregano', 'salt', 'sugar']
+        valid_folders = ['Salt','Sugar', 'Pepper', 'Oregano']
+
+        # Setting colors for plotting and visualization
+        colors = {'salt': 'blue', 'sugar': 'green', 'blackpepper': 'black', 'oregano': 'yellow', 'unknown': 'orange'}
+
+        # Input test sample
+        test_sample = test_sample.iloc[:,:2]
+        test_sample = test_sample.to_numpy().astype(np.float64)
+
+        # Code to plot
+        # plt.plot(test_sample[:,0], test_sample[:,1], color=colors['unknown'], label='unknown')
+
+        # Initialize minimum distance
+        minimum_distance = float('inf')
+        result = ""
+
+        # For each ingredient in dataset, compute average frechet distance
+        for folder in data_folders:
+            if folder in ingredient_names:
+                current_distance = 0
+                dtw = 0
+                csv_files = os.listdir(os.path.join(data_path, folder))
+                for file in csv_files:
+                    df = pd.read_csv(os.path.join(data_path, folder, file))
+                    current_sample = df.iloc[28:,:2]
+                    current_sample = current_sample.to_numpy().astype(np.float64)
+
+                    # Code to plot
+                    # plt.plot(current_sample[:,0], current_sample[:,1], color=colors[folder], label=folder)
+
+                    # Compute frechet distance between current sample and test sample
+                    current_distance += similaritymeasures.frechet_dist(current_sample, test_sample)
+                    d, dist = similaritymeasures.dtw(current_sample, test_sample)
+                    dtw += d
+
+                # Average the distance
+                current_distance = current_distance / len(csv_files)
+                # print("Average distance from " + folder + " is " + str(current_distance))
+
+                # Classified as the ingredient with minimum frechet curve distance
+                if current_distance < minimum_distance:
+                    minimum_distance = current_distance
+                    result = folder
+
+        return result
+
     def spectral_validation(self) -> str:
         """
         This method invokes a spectral scan, identifies the ingredient and returns the corresponding class name.
@@ -157,7 +218,7 @@ class IngredientValidationService:
             self.spectra_df = pd.DataFrame(spectra[1:], columns=spectra[0])
 
             # Get the prediction and return
-            prediction = classify_spectra(self.spectra_df)
+            prediction = self.classify_spectra(self.spectra_df)
 
             return prediction
 
