@@ -44,26 +44,18 @@ class IngredientValidationService:
         self.unsure = False
 
         self.class_names = [
-            "blackolives",
+            "bellpepper",
             "blackpepper",
-            "cabbage",
-            "carrot",
+            "cheese",
             "cherrytomatoes",
             "chilliflakes",
-            "corn",
-            "cucumber",
-            "greenolives",
-            "habaneropepper",
-            "mushroom",
+            "garlicpowder",
             "oregano",
-            "peanuts",
+            "pasta",
             "redonion",
             "salt",
-            "sugar",
-            "vinegar",
-            "water",
-            "whiteonion",
-        ]  # also "no_ingredient" class added manually
+            "sugar"
+        ]
 
         self.visually_similar_classes = [
             "bellpepper",
@@ -88,7 +80,7 @@ class IngredientValidationService:
             in_features=1280, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth"
+            weights_path + "/model/efficientNet-b0-dataset-v2-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
