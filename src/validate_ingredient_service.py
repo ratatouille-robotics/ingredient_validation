@@ -133,6 +133,11 @@ class IngredientValidationService:
     def classify_spectra(self, test_sample: pd.DataFrame = None) -> str:
         """
         Method to perform classification by comparing Fretchet distance with existing dataset
+        The spectral classification of ingredients is performed based on similarity of spectra.
+        The distance metric used for comparison is Fretchet distance.
+
+        Read more at:
+        https://jekel.me/similarity_measures/similaritymeasures.html#similaritymeasures.similaritymeasures.frechet_dist
         """
         # Load existing data
         rospack = rospkg.RosPack()
@@ -141,12 +146,10 @@ class IngredientValidationService:
         data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
 
         # List of ingredients
-        # ingredient_names = ['salt','sugar','blackpepper', 'oregano', 'bellpepper', 'cucumber']
-        ingredient_names = ['blackpepper', 'oregano', 'salt', 'sugar']
-        valid_folders = ['Salt','Sugar', 'Pepper', 'Oregano']
+        ingredient_pairs = [['blackpepper', 'oregano'], ['salt', 'sugar']]
 
         # Setting colors for plotting and visualization
-        colors = {'salt': 'blue', 'sugar': 'green', 'blackpepper': 'black', 'oregano': 'yellow', 'unknown': 'orange'}
+        # colors = {'salt': 'blue', 'sugar': 'green', 'blackpepper': 'black', 'oregano': 'yellow', 'unknown': 'orange'}
 
         # Input test sample
         test_sample = test_sample.iloc[:,:2]
@@ -161,7 +164,10 @@ class IngredientValidationService:
 
         # For each ingredient in dataset, compute average frechet distance
         for folder in data_folders:
-            if folder in ingredient_names:
+            for pair in ingredient_pairs:
+                if folder in pair:
+                    valid_folders = pair
+            if folder in valid_folders:
                 current_distance = 0
                 dtw = 0
                 csv_files = os.listdir(os.path.join(data_path, folder))

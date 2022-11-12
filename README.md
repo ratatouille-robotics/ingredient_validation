@@ -9,7 +9,7 @@ rosrun ingredient_validation validate_ingredient.py
 rosrun ingredient_validation data_collection.py
 
 1. Create a folder named "data" in ingredient_validation package.
-2. Modify line:40 in the script with respecttive ingredient name. 
+2. Modify line:40 in the script with respecttive ingredient name.
 3. Run the script with above command and draw the bounding box to track across frames and press enter.
 
 **Topics published:**
