@@ -24,6 +24,7 @@ import torchvision.transforms as T
 import similaritymeasures
 import matplotlib.pyplot as plt
 from turtle import color
+from datetime import datetime
 
 from PIL import Image as PILImage
 from sensor_msgs.msg import Image
@@ -107,6 +108,17 @@ class IngredientValidationService:
             # Do a forward pass, get prediction and scores
             self.model.eval()
             image = self.br.imgmsg_to_cv2(image)
+
+            # Log the image
+            rospack = rospkg.RosPack()
+            package_path = rospack.get_path("ingredient_validation")
+            log_path = package_path + "/logs"
+            os.mkdir(log_path)
+            now = datetime.now()
+            timestamp = now.strftime("%m_%d_%y_%H_%M_%S")
+            cv2.imwrite(image, now.strftime(log_path + "/ing_" + timestamp + ".jpg"))
+
+            # Preprocess image
             image = np.asarray(image)
             image = PILImage.fromarray(image)
             torch_transform = T.Compose(
@@ -120,6 +132,7 @@ class IngredientValidationService:
             image = torch_transform(image)
             image = torch.unsqueeze(image, dim=0)
 
+            # Forward passq
             outputs = self.model(image)
             outputs = F.softmax(outputs, dim=1)
             score = torch.max(outputs, 1)
@@ -131,7 +144,6 @@ class IngredientValidationService:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
-                self.unsure = True
             return prediction
 
         except rospy.ServiceException as e:
