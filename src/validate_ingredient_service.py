@@ -202,19 +202,19 @@ class IngredientValidationService:
 
         return result
 
-    def spectral_validation(self) -> str:
+    def spectral_validation(self, current_ingredient) -> str:
         """
         This method invokes a spectral scan, identifies the ingredient and returns the corresponding class name.
 
         Returns:
             string: Ingredient class name
         """
-        # We need a TCP connection with the windows server to which spectral camera is connected
-        tcp_socket = socket.create_connection(('10.0.1.2', 65000))
-        # tcp_socket = socket.create_connection(("127.0.0.1", 65000))
-        print("Connection established")
 
         try:
+            # We need a TCP connection with the windows server to which spectral camera is connected
+            tcp_socket = socket.create_connection(('10.0.1.2', 65000), timeout=5)
+            print("Connection established")
+
             # Send a test message to the windows server application
             data = "spectra"
             tcp_socket.sendall(str.encode(data))
@@ -233,14 +233,15 @@ class IngredientValidationService:
             # Get the prediction and return
             prediction = self.classify_spectra(self.spectra_df)
 
-            return prediction
-
         except:
             print("Connection with windows machine failed!")
+            prediction = current_ingredient
 
         finally:
             print("Closing socket")
             tcp_socket.close()
+
+        return prediction
 
     def handle_ingredient_validation(
         self,
@@ -258,7 +259,7 @@ class IngredientValidationService:
             # Invoke spectral validation only if we have identified one of the visually similar ingredients,
             # or if confidence threshold is low
             if req.ingredient_name in self.visually_similar_classes or req.ingredient_name == "no_ingredient":
-                prediction = self.spectral_validation()
+                prediction = self.spectral_validation(req.ingredient_name)
             else:
                 prediction = req.ingredient_name
 
