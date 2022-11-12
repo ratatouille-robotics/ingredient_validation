@@ -197,7 +197,7 @@ class IngredientValidationService:
             string: Ingredient class name
         """
         # We need a TCP connection with the windows server to which spectral camera is connected
-        tcp_socket = socket.create_connection(('10.1.1.2', 65000))
+        tcp_socket = socket.create_connection(('10.0.1.2', 65000))
         # tcp_socket = socket.create_connection(("127.0.0.1", 65000))
         print("Connection established")
 
