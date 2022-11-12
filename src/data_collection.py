@@ -37,7 +37,7 @@ class DataCollection:
         self.loop_rate = rospy.Rate(1)
 
         # Name of Ingredient being collected
-        self.name = "pasta"
+        self.name = "ginger_garlic_paste"
         rospack = rospkg.RosPack()
         package_path = rospack.get_path("ingredient_validation")
         self.data_path = os.path.join(package_path, "data/rgb_new/" + self.name)
@@ -67,7 +67,6 @@ class DataCollection:
         This callback is invoked whenever an image is obtained from the RGB Image subscriber
         """
         frame = self.br.imgmsg_to_cv2(msg)
-        frame = imutils.resize(frame, width=1500)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         (H, W) = frame.shape[:2]
 

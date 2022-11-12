@@ -46,23 +46,30 @@ class IngredientValidationService:
         self.unsure = False
 
         self.class_names = [
-            "bellpepper",
-            "blackpepper",
+            "bell_pepper",
+            "black_pepper",
             "cheese",
-            "cherrytomatoes",
-            "chilliflakes",
-            "garlicpowder",
+            "cherry_tomatoes",
+            "chilli_flakes",
+            "cumin_seeds",
+            "garlic_powder",
+            "ginger_garlic_paste",
+            "kitchen_king",
+            "mustard_seeds",
+            "onion",
             "oregano",
+            "paneer",
             "pasta",
-            "redonion",
+            "rice",
             "salt",
-            "sugar"
+            "sugar",
+            "sunflower_oil",
+            "turmeric",
+            "water"
         ]
 
         self.visually_similar_classes = [
-            "bellpepper",
             "blackpepper",
-            "cucumber",
             "oregano",
             "salt",
             "sugar",
@@ -82,7 +89,7 @@ class IngredientValidationService:
             in_features=1280, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b0-dataset-v2-epoch10.pth"
+            weights_path + "/model/efficientNet-b0-dataset-v2-12-11-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
