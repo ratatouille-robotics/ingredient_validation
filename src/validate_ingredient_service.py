@@ -80,7 +80,7 @@ class IngredientValidationService:
 
         # Load model & weights
         rospack = rospkg.RosPack()
-        weights_path = rospack.get_path("ingredient_validation")
+        self.package_path = rospack.get_path("ingredient_validation")
         self.model = torch.hub.load(
             "NVIDIA/DeepLearningExamples:torchhub",
             "nvidia_efficientnet_b0",
@@ -90,7 +90,7 @@ class IngredientValidationService:
             in_features=1280, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b0-dataset-v2-12-11-epoch10.pth"
+            self.package_path + "/model/efficientNet-b0-dataset-v2-15-11-7pm-epoch15.pth"
         )
         self.model.load_state_dict(weights)
 
@@ -104,27 +104,34 @@ class IngredientValidationService:
         try:
             # Get current image
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
+            image = self.br.imgmsg_to_cv2(image)
+            h, w = image.shape[:2]
+            image  = image[int(0.64*h):int(0.95*h), int(0.47*w):int(0.75*w)]
+            cv2.imshow('window', image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
-            image = self.br.imgmsg_to_cv2(image)
 
             # Log the image
             rospack = rospkg.RosPack()
             package_path = rospack.get_path("ingredient_validation")
             log_path = package_path + "/logs"
-            os.mkdir(log_path)
-            now = datetime.now()
-            timestamp = now.strftime("%m_%d_%y_%H_%M_%S")
-            cv2.imwrite(image, now.strftime(log_path + "/ing_" + timestamp + ".jpg"))
+            if not os.path.exists(log_path):
+                os.mkdir(log_path)
+            n = datetime.now()
+            t = n.strftime("%H_%M_%S")
+            filename = str(log_path) + "/ing_" + str(t) + ".jpg"
+            cv2.imwrite(filename, image)
 
             # Preprocess image
             image = np.asarray(image)
             image = PILImage.fromarray(image)
             torch_transform = T.Compose(
                 [
-                    T.CenterCrop((512, 512)),
-                    T.Resize((512, 512)),
+                    # T.CenterCrop((512, 512)),
+                    T.Resize((256, 256)),
                     T.ToTensor(),
                     T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ]
@@ -132,10 +139,12 @@ class IngredientValidationService:
             image = torch_transform(image)
             image = torch.unsqueeze(image, dim=0)
 
-            # Forward passq
+            # Forward pass
             outputs = self.model(image)
             outputs = F.softmax(outputs, dim=1)
             score = torch.max(outputs, 1)
+            print(outputs)
+            print(self.class_names)
             preds = torch.argmax(outputs, 1)
 
             # If score < 0.3, then say "No ingredient found"
@@ -144,6 +153,7 @@ class IngredientValidationService:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
+            print(prediction, score[0].item())
             return prediction
 
         except rospy.ServiceException as e:
