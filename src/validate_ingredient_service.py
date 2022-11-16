@@ -105,11 +105,9 @@ class IngredientValidationService:
             # Get current image
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
             image = self.br.imgmsg_to_cv2(image)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             h, w = image.shape[:2]
             image  = image[int(0.64*h):int(0.95*h), int(0.47*w):int(0.75*w)]
-            cv2.imshow('window', image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
