@@ -131,11 +131,9 @@ class IngredientValidationService:
             image = PILImage.fromarray(image)
             torch_transform = T.Compose(
                 [
-                    # T.CenterCrop((512, 512)),
+                    T.CenterCrop((400, 400)),
                     T.Resize((256, 256)),
-                    T.ToTensor(),
-                    # T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                ]
+                    T.ToTensor(),                ]
             )
             image = torch_transform(image)
             image = torch.unsqueeze(image, dim=0)
@@ -276,7 +274,7 @@ class IngredientValidationService:
         :return: A ValidateIngredientResponse Msg that contains a string indicating the detected ingredient.
         """
         if req.mode == 'rgb':
-            prediction = self.rgb_validation(visualize=True)
+            prediction = self.rgb_validation(logging=True)
 
         elif req.mode == 'spectral':
             # Invoke spectral validation only if we have identified one of the visually similar ingredients,
