@@ -1,2 +1,4 @@
+string mode
+string ingredient_name
 ---
 string found_ingredient
