@@ -61,6 +61,7 @@ class IngredientValidationService:
             "oregano",
             "paneer",
             "pasta",
+            "peanuts",
             "rice",
             "salt",
             "sugar",
@@ -76,25 +77,28 @@ class IngredientValidationService:
             "sugar",
         ]
 
+        # Publishers and subscribers
         self.camera_rgb_topic = "/camera/color/image_raw"
 
         # Load model & weights
         rospack = rospkg.RosPack()
         self.package_path = rospack.get_path("ingredient_validation")
+        
+        # Load model and weights
         self.model = torch.hub.load(
             "NVIDIA/DeepLearningExamples:torchhub",
-            "nvidia_efficientnet_b0",
+            "nvidia_efficientnet_b4",
             verbose=False,
         )
         self.model.classifier.fc = nn.Linear(
-            in_features=1280, out_features=len(self.class_names), bias=True
+            in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b0-dataset-v2-15-11-7pm-epoch15.pth"
+            self.package_path + "/model/efficientNet-b2-dataset-v2-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
-    def rgb_validation(self) -> str:
+    def rgb_validation(self, logging=False) -> str:
         """
         Validate ingredient from RGB image
 
@@ -113,15 +117,14 @@ class IngredientValidationService:
             self.model.eval()
 
             # Log the image
-            rospack = rospkg.RosPack()
-            package_path = rospack.get_path("ingredient_validation")
-            log_path = package_path + "/logs"
-            if not os.path.exists(log_path):
-                os.mkdir(log_path)
-            n = datetime.now()
-            t = n.strftime("%H_%M_%S")
-            filename = str(log_path) + "/ing_" + str(t) + ".jpg"
-            cv2.imwrite(filename, image)
+            if logging:
+                log_path = self.package_path + "/logs"
+                if not os.path.exists(log_path):
+                    os.mkdir(log_path)
+                n = datetime.now()
+                t = n.strftime("%H_%M_%S")
+                filename = str(log_path) + "/ing_" + str(t) + ".jpg"
+                cv2.imwrite(filename, image)
 
             # Preprocess image
             image = np.asarray(image)
@@ -131,7 +134,7 @@ class IngredientValidationService:
                     # T.CenterCrop((512, 512)),
                     T.Resize((256, 256)),
                     T.ToTensor(),
-                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    # T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ]
             )
             image = torch_transform(image)
@@ -151,7 +154,7 @@ class IngredientValidationService:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
-            print(prediction, score[0].item())
+            
             return prediction
 
         except rospy.ServiceException as e:
@@ -167,9 +170,7 @@ class IngredientValidationService:
         https://jekel.me/similarity_measures/similaritymeasures.html#similaritymeasures.similaritymeasures.frechet_dist
         """
         # Load existing data
-        rospack = rospkg.RosPack()
-        package_path = rospack.get_path("ingredient_validation")
-        data_path = os.path.join(package_path, 'data/spectral_absorbance')
+        data_path = os.path.join(self.package_path, 'data/spectral_absorbance')
         data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
 
         # List of ingredients
@@ -191,9 +192,11 @@ class IngredientValidationService:
 
         # For each ingredient in dataset, compute average frechet distance
         for folder in data_folders:
+            # Choose the visually similar pair that the ingredient belongs to
             for pair in ingredient_pairs:
                 if folder in pair:
                     valid_folders = pair
+            # Compare spectra between the two samples in the pair
             if folder in valid_folders:
                 current_distance = 0
                 dtw = 0
@@ -273,7 +276,7 @@ class IngredientValidationService:
         :return: A ValidateIngredientResponse Msg that contains a string indicating the detected ingredient.
         """
         if req.mode == 'rgb':
-            prediction = self.rgb_validation()
+            prediction = self.rgb_validation(visualize=True)
 
         elif req.mode == 'spectral':
             # Invoke spectral validation only if we have identified one of the visually similar ingredients,

@@ -49,26 +49,29 @@ class IngredientValidation:
 
         # Class names
         self.class_names = [
-            "blackolives",
-            "blackpepper",
-            "cabbage",
-            "carrot",
-            "cherrytomatoes",
-            "chilliflakes",
-            "corn",
-            "cucumbers",
-            "greenolives",
-            "habaneropepper",
-            "mushroom",
+            "bell_pepper",
+            "black_pepper",
+            "cheese",
+            "cherry_tomatoes",
+            "chilli_flakes",
+            "cumin_seeds",
+            "garlic_powder",
+            "ginger_garlic_paste",
+            "kitchen_king",
+            "mustard_seeds",
+            "onion",
             "oregano",
+            "paneer",
+            "pasta",
             "peanuts",
-            "redonion",
+            "rice",
             "salt",
             "sugar",
-            "vinegar",
-            "water",
-            "whiteonion",
-        ]  # also "no_ingredient" class added manually
+            "sunflower_oil",
+            "turmeric",
+            "water"
+        ]
+
 
         rospack = rospkg.RosPack()
         weights_path = rospack.get_path("ingredient_validation")
@@ -76,14 +79,14 @@ class IngredientValidation:
         # Model
         self.model = torch.hub.load(
             "NVIDIA/DeepLearningExamples:torchhub",
-            "nvidia_efficientnet_b0",
+            "nvidia_efficientnet_b4",
             verbose=False,
         )
         self.model.classifier.fc = nn.Linear(
-            in_features=1280, out_features=len(self.class_names), bias=True
+            in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b0-svd-for-plots-epoch25.pth"
+            weights_path + "/model/efficientNet-b2-dataset-v2-epoch10.pth"
         )
         self.model.load_state_dict(weights)
         self.model.eval()
@@ -99,11 +102,9 @@ class IngredientValidation:
         image = PILImage.fromarray(image)
         torch_transform = T.Compose(
             [
-                T.CenterCrop((512, 512)),
-                T.Resize((512, 512)),
-                T.ToTensor(),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
+                T.CenterCrop((400, 400)),
+                T.Resize((256, 256)),
+                T.ToTensor(),            ]
         )
         image = torch_transform(image)
         image = torch.unsqueeze(image, dim=0)
