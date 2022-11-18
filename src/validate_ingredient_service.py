@@ -72,6 +72,10 @@ class IngredientValidationService:
 
         self.visually_similar_classes = [
             "blackpepper",
+            "cumin_seeds",
+            "garlic_powder",
+            "kitchen_king",
+            "mustard_seeds",
             "oregano",
             "salt",
             "sugar",
@@ -148,7 +152,7 @@ class IngredientValidationService:
 
             # If score < 0.3, then say "No ingredient found"
             prediction = ""
-            if score[0].item() > 0.3:
+            if score[0].item() > 0.25:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
@@ -172,17 +176,14 @@ class IngredientValidationService:
         data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
 
         # List of ingredients
-        ingredient_pairs = [['blackpepper', 'oregano'], ['salt', 'sugar']]
-
-        # Setting colors for plotting and visualization
-        # colors = {'salt': 'blue', 'sugar': 'green', 'blackpepper': 'black', 'oregano': 'yellow', 'unknown': 'orange'}
+        ingredient_groups = [
+            ['blackpepper', 'oregano', 'mustard_seeds', 'cumin_seeds', 'kitchen_king'], 
+            ['salt', 'sugar', 'garlic_powder']
+        ]
 
         # Input test sample
         test_sample = test_sample.iloc[:,:2]
         test_sample = test_sample.to_numpy().astype(np.float64)
-
-        # Code to plot
-        # plt.plot(test_sample[:,0], test_sample[:,1], color=colors['unknown'], label='unknown')
 
         # Initialize minimum distance
         minimum_distance = float('inf')
@@ -191,7 +192,7 @@ class IngredientValidationService:
         # For each ingredient in dataset, compute average frechet distance
         for folder in data_folders:
             # Choose the visually similar pair that the ingredient belongs to
-            for pair in ingredient_pairs:
+            for pair in ingredient_groups:
                 if folder in pair:
                     valid_folders = pair
             # Compare spectra between the two samples in the pair
@@ -203,9 +204,6 @@ class IngredientValidationService:
                     df = pd.read_csv(os.path.join(data_path, folder, file))
                     current_sample = df.iloc[28:,:2]
                     current_sample = current_sample.to_numpy().astype(np.float64)
-
-                    # Code to plot
-                    # plt.plot(current_sample[:,0], current_sample[:,1], color=colors[folder], label=folder)
 
                     # Compute frechet distance between current sample and test sample
                     current_distance += similaritymeasures.frechet_dist(current_sample, test_sample)

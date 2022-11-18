@@ -1,4 +1,5 @@
 pandas
+rospkg
 opencv-python
 similaritymeasures
 torchvision
