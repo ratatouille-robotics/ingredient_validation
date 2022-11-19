@@ -107,7 +107,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b2-pasta-dataset-2-epoch10.pth"
+            self.package_path + "/model/efficientNet-b4-pasta-dataset-final-epoch8.pth"
         )
         self.model.load_state_dict(weights)
 
@@ -122,7 +122,6 @@ class IngredientValidationService:
             # Get current image
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
             image = self.br.imgmsg_to_cv2(image)
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             old_image = image
             h, w = image.shape[:2]
             image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
@@ -156,11 +155,9 @@ class IngredientValidationService:
             outputs = self.model(image)
             outputs = F.softmax(outputs, dim=1)
             score = torch.max(outputs, 1)
-            print(outputs)
-            print(self.class_names)
             preds = torch.argmax(outputs, 1)
 
-            # If score < 0.3, then say "No ingredient found"
+            # If score < 0.1, then say "No ingredient found"
             prediction = ""
             if score[0].item() > 0.1:
                 prediction = self.class_names[preds]

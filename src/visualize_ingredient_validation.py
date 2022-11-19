@@ -78,7 +78,7 @@ class IngredientValidation:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b2-pasta-dataset-2-epoch10.pth"
+            weights_path + "/model/efficientNet-b4-pasta-dataset-final-epoch8.pth"
         )
         self.model.load_state_dict(weights)
         self.model.eval()
@@ -89,7 +89,6 @@ class IngredientValidation:
         """
         # Image preprocessing
         image = self.br.imgmsg_to_cv2(msg)
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_anno = image
         h, w = image.shape[:2]
         image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
@@ -97,7 +96,6 @@ class IngredientValidation:
         image = PILImage.fromarray(image)
         torch_transform = T.Compose(
             [
-                # T.CenterCrop((256, 256)),
                 T.Resize((256, 256)),
                 T.ToTensor(),            ]
         )
@@ -109,6 +107,8 @@ class IngredientValidation:
         outputs = F.softmax(outputs, dim=1)
         score = torch.max(outputs, 1)
         preds = torch.argmax(outputs, 1)
+
+        # If score < 0.1, then say "No ingredient found"
         if score[0].item() > 0.1:
             prediction = self.class_names[preds]
             pred_string = prediction + " " + str(round(score[0].item(), 2))
