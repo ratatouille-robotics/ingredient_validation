@@ -45,30 +45,42 @@ class IngredientValidationService:
         self.br = CvBridge()
         self.loop_rate = rospy.Rate(1)
         self.unsure = False
-
-        self.class_names = [
-            "bell_pepper",
-            "black_pepper",
-            "cheese",
-            "cherry_tomatoes",
-            "chilli_flakes",
-            "cumin_seeds",
-            "garlic_powder",
-            "ginger_garlic_paste",
-            "kitchen_king",
-            "mustard_seeds",
-            "onion",
-            "oregano",
-            "paneer",
-            "pasta",
-            "peanuts",
-            "rice",
-            "salt",
-            "sugar",
-            "sunflower_oil",
-            "turmeric",
-            "water"
-        ]
+        
+        pasta = True
+        
+        if pasta:
+            # Pasta ingredients
+            self.class_names = [
+                "bell_pepper",
+                "black_pepper",
+                "cheese",
+                "chilli_flakes",
+                "garlic_powder",
+                "marinara",
+                "onion",
+                "oregano",
+                "pasta",
+                "salt",
+                "sugar",
+                "sunflower_oil",
+                "water"
+            ]
+        else:
+            # Pulao ingredients
+            self.class_names = [
+                "cumin_seeds",
+                "ginger_garlic_paste",
+                "kitchen_king",
+                "mustard_seeds",
+                "onion",
+                "paneer",
+                "rice",
+                "salt",
+                "sugar",
+                "sunflower_oil",
+                "turmeric",
+                "water"
+            ]
 
         self.visually_similar_classes = [
             "blackpepper",
@@ -98,7 +110,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b2-dataset-v2-epoch10.pth"
+            self.package_path + "/model/efficientNet-b2-pasta-dataset-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
