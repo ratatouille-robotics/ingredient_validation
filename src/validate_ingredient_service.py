@@ -83,11 +83,8 @@ class IngredientValidationService:
             ]
 
         self.visually_similar_classes = [
-            "blackpepper",
-            "cumin_seeds",
+            "black_pepper",
             "garlic_powder",
-            "kitchen_king",
-            "mustard_seeds",
             "oregano",
             "salt",
             "sugar",
@@ -126,8 +123,9 @@ class IngredientValidationService:
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
             image = self.br.imgmsg_to_cv2(image)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            old_image = image
             h, w = image.shape[:2]
-            image  = image[int(0.64*h):int(0.95*h), int(0.47*w):int(0.75*w)]
+            image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.75*w)]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
@@ -141,13 +139,13 @@ class IngredientValidationService:
                 t = n.strftime("%H_%M_%S")
                 filename = str(log_path) + "/ing_" + str(t) + ".jpg"
                 cv2.imwrite(filename, image)
+                cv2.imwrite(filename+'_full', old_image)
 
             # Preprocess image
             image = np.asarray(image)
             image = PILImage.fromarray(image)
             torch_transform = T.Compose(
                 [
-                    T.CenterCrop((400, 400)),
                     T.Resize((256, 256)),
                     T.ToTensor(),                ]
             )
@@ -172,9 +170,9 @@ class IngredientValidationService:
             return prediction
 
         except rospy.ServiceException as e:
-            print("Service call failed: %s" % e)
+            rospy.loginfo("Service call failed: %s" % e)
 
-    def classify_spectra(self, test_sample: pd.DataFrame = None) -> str:
+    def classify_spectra(self, test_sample: pd.DataFrame = None, current_ingredient="") -> str:
         """
         Method to perform classification by comparing Fretchet distance with existing dataset
         The spectral classification of ingredients is performed based on similarity of spectra.
@@ -189,7 +187,7 @@ class IngredientValidationService:
 
         # List of ingredients
         ingredient_groups = [
-            ['blackpepper', 'oregano', 'mustard_seeds', 'cumin_seeds', 'kitchen_king'], 
+            ['black_pepper', 'oregano'],
             ['salt', 'sugar', 'garlic_powder']
         ]
 
@@ -201,12 +199,18 @@ class IngredientValidationService:
         minimum_distance = float('inf')
         result = ""
 
+        # Choose the visually similar pair that the ingredient belongs to
+        valid_folders = []
+        for group in ingredient_groups:
+            if current_ingredient in group:
+                valid_folders = group
+
+        if not valid_folders:
+            for group in ingredient_groups:
+                valid_folders.extend(group)
+
         # For each ingredient in dataset, compute average frechet distance
         for folder in data_folders:
-            # Choose the visually similar pair that the ingredient belongs to
-            for pair in ingredient_groups:
-                if folder in pair:
-                    valid_folders = pair
             # Compare spectra between the two samples in the pair
             if folder in valid_folders:
                 current_distance = 0
@@ -243,8 +247,8 @@ class IngredientValidationService:
 
         try:
             # We need a TCP connection with the windows server to which spectral camera is connected
-            tcp_socket = socket.create_connection(('10.0.1.2', 65000), timeout=5)
-            print("Connection established")
+            tcp_socket = socket.create_connection(('10.0.1.2', 65000), timeout=10)
+            rospy.loginfo("Connection established")
 
             # Send a test message to the windows server application
             data = "spectra"
@@ -257,19 +261,20 @@ class IngredientValidationService:
                 data = pickle.loads(packet)
                 spectra.append(data)
                 packet = tcp_socket.recv(4096)
+                rospy.loginfo("received")
 
             # Store data in pandas df
             self.spectra_df = pd.DataFrame(spectra[1:], columns=spectra[0])
 
             # Get the prediction and return
-            prediction = self.classify_spectra(self.spectra_df)
+            prediction = self.classify_spectra(test_sample=self.spectra_df, current_ingredient=current_ingredient)
 
         except:
-            print("Connection with windows machine failed!")
+            rospy.loginfo("Connection with windows machine failed!")
             prediction = current_ingredient
 
         finally:
-            print("Closing socket")
+            rospy.loginfo("Closing socket")
             tcp_socket.close()
 
         return prediction
