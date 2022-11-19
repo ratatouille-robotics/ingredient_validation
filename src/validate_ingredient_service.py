@@ -122,10 +122,10 @@ class IngredientValidationService:
             # Get current image
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
             image = self.br.imgmsg_to_cv2(image)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             old_image = image
             h, w = image.shape[:2]
-            image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.75*w)]
+            image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
@@ -162,7 +162,7 @@ class IngredientValidationService:
 
             # If score < 0.3, then say "No ingredient found"
             prediction = ""
-            if score[0].item() > 0.25:
+            if score[0].item() > 0.1:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
