@@ -107,7 +107,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b2-pasta-dataset-epoch10.pth"
+            self.package_path + "/model/efficientNet-b2-pasta-dataset-2-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 

@@ -37,7 +37,7 @@ class DataCollection:
         self.loop_rate = rospy.Rate(1)
 
         # Name of Ingredient being collected
-        self.name = "ginger_garlic_paste"
+        self.name = "pasta"
         rospack = rospkg.RosPack()
         package_path = rospack.get_path("ingredient_validation")
         self.data_path = os.path.join(package_path, "data/rgb_new/" + self.name)
