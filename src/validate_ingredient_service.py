@@ -122,10 +122,9 @@ class IngredientValidationService:
             # Get current image
             image = rospy.wait_for_message(self.camera_rgb_topic, Image)
             image = self.br.imgmsg_to_cv2(image)
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             old_image = image
             h, w = image.shape[:2]
-            image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
+            image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
@@ -138,8 +137,10 @@ class IngredientValidationService:
                 n = datetime.now()
                 t = n.strftime("%H_%M_%S")
                 filename = str(log_path) + "/ing_" + str(t) + ".jpg"
-                cv2.imwrite(filename, image)
-                cv2.imwrite(filename+'_full', old_image)
+                log_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                log_old_image = cv2.cvtColor(old_image, cv2.COLOR_BGR2RGB)
+                cv2.imwrite(filename, log_image)
+                cv2.imwrite(filename+'_full', log_old_image)
 
             # Preprocess image
             image = np.asarray(image)
@@ -156,11 +157,9 @@ class IngredientValidationService:
             outputs = self.model(image)
             outputs = F.softmax(outputs, dim=1)
             score = torch.max(outputs, 1)
-            print(outputs)
-            print(self.class_names)
             preds = torch.argmax(outputs, 1)
 
-            # If score < 0.3, then say "No ingredient found"
+            # If score < 0.1, then say "No ingredient found"
             prediction = ""
             if score[0].item() > 0.1:
                 prediction = self.class_names[preds]
