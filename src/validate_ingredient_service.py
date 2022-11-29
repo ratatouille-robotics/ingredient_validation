@@ -46,7 +46,7 @@ class IngredientValidationService:
         self.loop_rate = rospy.Rate(1)
         self.unsure = False
         
-        pasta = True
+        pasta = False
         
         if pasta:
             # Pasta ingredients
@@ -71,23 +71,22 @@ class IngredientValidationService:
                 "cumin_seeds",
                 "ginger_garlic_paste",
                 "kitchen_king",
-                "mustard_seeds",
                 "onion",
                 "paneer",
                 "rice",
                 "salt",
-                "sugar",
                 "sunflower_oil",
                 "turmeric",
                 "water"
             ]
 
         self.visually_similar_classes = [
-            "black_pepper",
-            "garlic_powder",
-            "oregano",
-            "salt",
-            "sugar",
+            'cumin_seeds',
+            'ginger_garlic_paste',
+            'kitchen_king',
+            'salt',
+            'turmeric',
+            'water',
         ]
 
         # Publishers and subscribers
@@ -107,7 +106,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b2-pasta-dataset-2-epoch10.pth"
+            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
@@ -181,13 +180,13 @@ class IngredientValidationService:
         https://jekel.me/similarity_measures/similaritymeasures.html#similaritymeasures.similaritymeasures.frechet_dist
         """
         # Load existing data
-        data_path = os.path.join(self.package_path, 'data/spectral_absorbance')
+        data_path = os.path.join(self.package_path, 'data/spectral_pulao')
         data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
 
         # List of ingredients
         ingredient_groups = [
-            ['black_pepper', 'oregano'],
-            ['salt', 'sugar', 'garlic_powder']
+            ['kitchen_king', 'turmeric', 'cumin_seeds'],
+            ['salt', 'ginger_garlic_paste', 'water']
         ]
 
         # Input test sample
