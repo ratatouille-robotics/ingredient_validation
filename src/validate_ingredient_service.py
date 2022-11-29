@@ -45,9 +45,9 @@ class IngredientValidationService:
         self.br = CvBridge()
         self.loop_rate = rospy.Rate(1)
         self.unsure = False
-        
-        pasta = True
-        
+
+        pasta = False
+
         if pasta:
             # Pasta ingredients
             self.class_names = [
@@ -71,23 +71,20 @@ class IngredientValidationService:
                 "cumin_seeds",
                 "ginger_garlic_paste",
                 "kitchen_king",
-                "mustard_seeds",
                 "onion",
                 "paneer",
                 "rice",
                 "salt",
-                "sugar",
                 "sunflower_oil",
                 "turmeric",
                 "water"
             ]
 
         self.visually_similar_classes = [
-            "black_pepper",
-            "garlic_powder",
-            "oregano",
-            "salt",
-            "sugar",
+            'ginger_garlic_paste',
+            'kitchen_king',
+            'sunflower_oil',
+            'water',
         ]
 
         # Publishers and subscribers
@@ -96,7 +93,7 @@ class IngredientValidationService:
         # Load model & weights
         rospack = rospkg.RosPack()
         self.package_path = rospack.get_path("ingredient_validation")
-        
+
         # Load model and weights
         self.model = torch.hub.load(
             "NVIDIA/DeepLearningExamples:torchhub",
@@ -107,7 +104,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b4-pasta-dataset-final-epoch8.pth"
+            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch8-2.pth"
         )
         self.model.load_state_dict(weights)
 
@@ -124,7 +121,7 @@ class IngredientValidationService:
             image = self.br.imgmsg_to_cv2(image)
             old_image = image
             h, w = image.shape[:2]
-            image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
+            image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
@@ -137,8 +134,10 @@ class IngredientValidationService:
                 n = datetime.now()
                 t = n.strftime("%H_%M_%S")
                 filename = str(log_path) + "/ing_" + str(t) + ".jpg"
-                cv2.imwrite(filename, image)
-                cv2.imwrite(filename+'_full', old_image)
+                log_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                log_old_image = cv2.cvtColor(old_image, cv2.COLOR_BGR2RGB)
+                cv2.imwrite(filename, log_image)
+                cv2.imwrite(filename+'_full', log_old_image)
 
             # Preprocess image
             image = np.asarray(image)
@@ -163,7 +162,7 @@ class IngredientValidationService:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
-            
+
             return prediction
 
         except rospy.ServiceException as e:
@@ -179,13 +178,15 @@ class IngredientValidationService:
         https://jekel.me/similarity_measures/similaritymeasures.html#similaritymeasures.similaritymeasures.frechet_dist
         """
         # Load existing data
-        data_path = os.path.join(self.package_path, 'data/spectral_absorbance')
+        data_path = os.path.join(self.package_path, 'data/spectral_pulao')
         data_folders = os.listdir(os.path.join(os.getcwd(), data_path))
 
         # List of ingredients
         ingredient_groups = [
-            ['black_pepper', 'oregano'],
-            ['salt', 'sugar', 'garlic_powder']
+            ['kitchen_king', 'cumin_seeds'],
+            ['salt', 'ginger_garlic_paste'],
+            ['salt', 'water'],
+            ['salt', 'sunflower_oil'],
         ]
 
         # Input test sample

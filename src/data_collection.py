@@ -37,10 +37,10 @@ class DataCollection:
         self.loop_rate = rospy.Rate(1)
 
         # Name of Ingredient being collected
-        self.name = "pasta"
+        self.name = "turmeric"
         rospack = rospkg.RosPack()
         package_path = rospack.get_path("ingredient_validation")
-        self.data_path = os.path.join(package_path, "data/rgb_new/" + self.name)
+        self.data_path = os.path.join(package_path, "data/rgb_pulao/" + self.name)
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
 

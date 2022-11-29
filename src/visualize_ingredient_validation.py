@@ -46,24 +46,37 @@ class IngredientValidation:
             queue_size=1,
             buff_size=2 ** 24,
         )
-
-        # Class names
-        self.class_names = [
-            "bell_pepper",
-            "black_pepper",
-            "cheese",
-            "chilli_flakes",
-            "garlic_powder",
-            "marinara",
-            "onion",
-            "oregano",
-            "pasta",
-            "salt",
-            "sugar",
-            "sunflower_oil",
-            "water"
-        ]
-
+        pasta = False
+        if pasta:
+            # Class names
+            self.class_names = [
+                "bell_pepper",
+                "black_pepper",
+                "cheese",
+                "chilli_flakes",
+                "garlic_powder",
+                "marinara",
+                "onion",
+                "oregano",
+                "pasta",
+                "salt",
+                "sugar",
+                "sunflower_oil",
+                "water"
+            ]
+        else:
+            self.class_names = [
+                "cumin_seeds",
+                "ginger_garlic_paste",
+                "kitchen_king",
+                "onion",
+                "paneer",
+                "rice",
+                "salt",
+                "sunflower_oil",
+                "turmeric",
+                "water"
+            ]
 
         rospack = rospkg.RosPack()
         weights_path = rospack.get_path("ingredient_validation")
@@ -78,7 +91,7 @@ class IngredientValidation:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b4-pasta-dataset-final-epoch8.pth"
+            weights_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch8-2.pth"
         )
         self.model.load_state_dict(weights)
         self.model.eval()
@@ -89,9 +102,10 @@ class IngredientValidation:
         """
         # Image preprocessing
         image = self.br.imgmsg_to_cv2(msg)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_anno = image
         h, w = image.shape[:2]
-        image  = image[int(0.6*h):int(0.99*h), int(0.3*w):int(0.75*w)]
+        image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
         image = np.asarray(image)
         image = PILImage.fromarray(image)
         torch_transform = T.Compose(
