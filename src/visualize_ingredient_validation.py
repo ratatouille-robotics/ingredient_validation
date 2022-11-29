@@ -102,7 +102,6 @@ class IngredientValidation:
         """
         # Image preprocessing
         image = self.br.imgmsg_to_cv2(msg)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_anno = image
         h, w = image.shape[:2]
         image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
