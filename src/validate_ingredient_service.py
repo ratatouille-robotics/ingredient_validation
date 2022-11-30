@@ -104,7 +104,7 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch8-2.pth"
+            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-with-tags-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
@@ -121,7 +121,7 @@ class IngredientValidationService:
             image = self.br.imgmsg_to_cv2(image)
             old_image = image
             h, w = image.shape[:2]
-            image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
+            image  = image[120:460, 270:530]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()

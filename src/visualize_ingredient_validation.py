@@ -91,7 +91,7 @@ class IngredientValidation:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch8-2.pth"
+            weights_path + "/model/efficientNet-b4-pulao-fvd-encore-with-tags-epoch10.pth"
         )
         self.model.load_state_dict(weights)
         self.model.eval()
