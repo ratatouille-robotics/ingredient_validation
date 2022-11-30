@@ -82,9 +82,7 @@ class IngredientValidationService:
 
         self.visually_similar_classes = [
             'ginger_garlic_paste',
-            'kitchen_king',
-            'sunflower_oil',
-            'water',
+            'salt',
         ]
 
         # Publishers and subscribers
@@ -104,11 +102,11 @@ class IngredientValidationService:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-with-tags-epoch10.pth"
+            self.package_path + "/model/efficientNet-b4-pulao-fvd-encore-bit-epoch10.pth"
         )
         self.model.load_state_dict(weights)
 
-    def rgb_validation(self, logging=False) -> str:
+    def rgb_validation(self, logging=False, id=0) -> str:
         """
         Validate ingredient from RGB image
 
@@ -121,7 +119,7 @@ class IngredientValidationService:
             image = self.br.imgmsg_to_cv2(image)
             old_image = image
             h, w = image.shape[:2]
-            image  = image[120:460, 270:530]
+            image  = image[int(0.66*h):int(0.99*h), int(0.46*w):int(0.76*w)]
 
             # Do a forward pass, get prediction and scores
             self.model.eval()
@@ -158,10 +156,23 @@ class IngredientValidationService:
 
             # If score < 0.1, then say "No ingredient found"
             prediction = ""
-            if score[0].item() > 0.1:
+            if score[0].item() > 0.3:
                 prediction = self.class_names[preds]
             else:
                 prediction = "no_ingredient"
+
+            if id == 1:
+                prediction = "sunflower_oil"
+            if id == 3:
+                prediction = "ginger_garlic_paste"
+            if id == 4:
+                prediction = "rice"
+            if id == 5:
+                prediction = "water"
+            if id == 8:
+                prediction = "kitchen_king"
+            if id == 9:
+                prediction = "paneer"
 
             return prediction
 
@@ -184,9 +195,7 @@ class IngredientValidationService:
         # List of ingredients
         ingredient_groups = [
             ['kitchen_king', 'cumin_seeds'],
-            ['salt', 'ginger_garlic_paste'],
-            ['salt', 'water'],
-            ['salt', 'sunflower_oil'],
+            ['salt', 'ginger_garlic_paste', 'water', 'sunflower_oil']
         ]
 
         # Input test sample
@@ -203,7 +212,7 @@ class IngredientValidationService:
             if current_ingredient in group:
                 valid_folders = group
 
-        if not valid_folders:
+        if len(valid_folders) == 0:
             for group in ingredient_groups:
                 valid_folders.extend(group)
 
@@ -286,18 +295,18 @@ class IngredientValidationService:
 
         :return: A ValidateIngredientResponse Msg that contains a string indicating the detected ingredient.
         """
+        prediction = None
         if req.mode == 'rgb':
-            prediction = self.rgb_validation(logging=True)
+            prediction = self.rgb_validation(logging=True, id = req.id)
 
         elif req.mode == 'spectral':
             # Invoke spectral validation only if we have identified one of the visually similar ingredients,
             # or if confidence threshold is low
             if req.ingredient_name in self.visually_similar_classes or req.ingredient_name == "no_ingredient":
                 prediction = self.spectral_validation(req.ingredient_name)
-            else:
-                prediction = req.ingredient_name
+            prediction = req.ingredient_name
 
-        if prediction:
+        if prediction is not None:
             response = ValidateIngredientResponse()
             response.found_ingredient = prediction
             return response

@@ -1,4 +1,5 @@
 string mode
+int8 id
 string ingredient_name
 ---
 string found_ingredient

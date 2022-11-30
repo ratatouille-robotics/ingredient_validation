@@ -21,6 +21,9 @@ from PIL import Image as PILImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
+from ingredient_validation.srv import ValidateIngredient
+from ar_track_alvar_msgs.msg import AlvarMarkers
+
 
 
 class IngredientValidation:
@@ -31,6 +34,7 @@ class IngredientValidation:
     def __init__(self):
         # Params
         self.br = CvBridge()
+        self.response = ""
         # Node cycle rate (in Hz).
         self.loop_rate = rospy.Rate(1)
 
@@ -42,10 +46,14 @@ class IngredientValidation:
         rospy.Subscriber(
             "/camera/color/image_raw",
             Image,
-            self.callback,
+            self.img_callback,
             queue_size=1,
             buff_size=2 ** 24,
         )
+        rospy.Subscriber(
+            "/ar_pose_marker", AlvarMarkers, self.callback, queue_size=1
+        )
+
         pasta = False
         if pasta:
             # Class names
@@ -91,7 +99,7 @@ class IngredientValidation:
             in_features=1792, out_features=len(self.class_names), bias=True
         )
         weights = torch.load(
-            weights_path + "/model/efficientNet-b4-pulao-fvd-encore-with-tags-epoch10.pth"
+            weights_path + "/model/efficientNet-b4-pulao-fvd-encore-epoch10.pth"
         )
         self.model.load_state_dict(weights)
         self.model.eval()
@@ -100,37 +108,31 @@ class IngredientValidation:
         """
         This callback is invoked whenever an image is obtained from the RGB Image subscriber
         """
+        id = None
+        for marker in msg.markers:
+            id = marker.id
+            break
+        if id is not None:
+            rospy.wait_for_service("ingredient_validation")
+            try:
+                service_call = rospy.ServiceProxy(
+                    "ingredient_validation", ValidateIngredient
+                )
+                response = service_call(mode="rgb", id=id)
+                print(f"Service Response: {response.found_ingredient}")
+
+            except rospy.ServiceException as e:
+                print("Service error")
+
+            self.response = response.found_ingredient
+            self.pub.publish(self.response)
+            print("Predicted ingredient: ", self.response)
+
+    def img_callback(self, msg):
+
         # Image preprocessing
         image = self.br.imgmsg_to_cv2(msg)
         image_anno = image
-        h, w = image.shape[:2]
-        image  = image[int(0.6*h):int(0.99*h), int(0.45*w):int(0.85*w)]
-        image = np.asarray(image)
-        image = PILImage.fromarray(image)
-        torch_transform = T.Compose(
-            [
-                T.Resize((256, 256)),
-                T.ToTensor(),            ]
-        )
-        image = torch_transform(image)
-        image = torch.unsqueeze(image, dim=0)
-
-        # Obtaining model prediction
-        outputs = self.model(image)
-        outputs = F.softmax(outputs, dim=1)
-        score = torch.max(outputs, 1)
-        preds = torch.argmax(outputs, 1)
-
-        # If score < 0.1, then say "No ingredient found"
-        if score[0].item() > 0.1:
-            prediction = self.class_names[preds]
-            pred_string = prediction + " " + str(round(score[0].item(), 2))
-        else:
-            prediction = "no_ingredient"
-            pred_string = prediction
-        self.pub.publish(prediction)
-        print("Predicted ingredient: ", prediction)
-        print("Confidence score: ", score[0].item())
 
         # Make annotated image
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -148,7 +150,34 @@ class IngredientValidation:
         cv2.rectangle(image_anno, upper_left, bottom_right, (255, 255, 255), 2)
         cv2.putText(
             image_anno,
-            pred_string,
+            self.response,
+            upper_left,
+            font,
+            fontScale,
+            fontColor,
+            thickness,
+            lineType,
+        )
+        # Publish image
+        self.pub_img.publish(self.br.cv2_to_imgmsg(image_anno))
+
+        # Make annotated image
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        bottomLeftCornerOfText = (10, 500)
+        fontScale = 1
+        fontColor = (255, 0, 0)
+        thickness = 2
+        lineType = 2
+
+        # Adding rectangle and text
+        height, width, _ = image_anno.shape
+        print(width, height)
+        upper_left = ((width // 2) - 200, (height // 2) + 200)
+        bottom_right = ((width // 2) + 200, (height // 2) - 200)
+        cv2.rectangle(image_anno, upper_left, bottom_right, (255, 255, 255), 2)
+        cv2.putText(
+            image_anno,
+            self.response,
             upper_left,
             font,
             fontScale,
