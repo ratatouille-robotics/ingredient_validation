@@ -235,7 +235,6 @@ class IngredientValidationService:
 
                 # Average the distance
                 current_distance = current_distance / len(csv_files)
-                # print("Average distance from " + folder + " is " + str(current_distance))
 
                 # Classified as the ingredient with minimum frechet curve distance
                 if current_distance < minimum_distance:
